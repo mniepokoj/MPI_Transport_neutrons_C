@@ -48,29 +48,13 @@ int singleNeutronTransport(double C, double Cc, double H)
     }
 }
 
-double neutronTransport(unsigned long N, double C, double Cc, double H)
-{
-    long tries = 0;
-    int passed = 0;
-    for (int i = 0; i < N; i++)
-    {
-        int hasTransmitted = singleNeutronTransport(C, Cc, H);
-
-        tries += 1;
-        passed += hasTransmitted;
-    }
-
-    return (double)passed / tries;
-}
-
 int main(int argc, char** argv) 
 {
-    double Cc = 0.3;
-    double Cs = 0.7;
-    double C = 1;
-    double H = 1;
-    unsigned long N = 2000000000, n;
-    double result;
+    const double Cc = 0.3;
+    const double Cs = 0.7;
+    const double C = 1;
+    const double H = 1;
+    unsigned long N, n;
 
     int my_id;
     int serverId;
@@ -79,27 +63,37 @@ int main(int argc, char** argv)
     MPI_Comm world, workers;
     MPI_Group world_group, worker_group;
     MPI_Status status;
-    int ranks[1];
-    int request;
-    int i, iter, done, max, min, workerId;
-    unsigned in, out, totalIn, totalOut;
-    double* rands = (double*)malloc(CHUNKSIZE * sizeof(double));
+
+    int ranks[1], request;
+    int i, j, in, out, totalIn, totalOut;
+    double* rands;
 
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     serverId = nproc - 1;
-    n = N / (nproc - 1);
 
     MPI_Comm_group(MPI_COMM_WORLD, &world_group);
     ranks[0] = serverId;
     MPI_Group_excl(world_group, 1, ranks, &worker_group);
     MPI_Comm_create(MPI_COMM_WORLD, worker_group, &workers);
+    if (my_id == 0)
+    {
+        sscanf_s(argv[1], "%d", &N);
+        MPI_Bcast(&N, 1, MPI_INT, 0, workers);
+    }
     MPI_Group_free(&worker_group);
     MPI_Group_free(&world_group);
 
-    in = 0;
-    out = 0;
+    if (my_id == 0)
+    {
+        sscanf_s(argv[1], "%d", &N);
+    }
+    MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    n = N / (nproc - 1);
+    in = out = 0;
+    rands = (double*)malloc(CHUNKSIZE * sizeof(double));
 
     if (my_id == serverId)
     {
@@ -127,7 +121,7 @@ int main(int argc, char** argv)
         {
             MPI_Send(&request, 1, MPI_INT, serverId, REQUEST, MPI_COMM_WORLD);
             MPI_Recv(rands, CHUNKSIZE, MPI_DOUBLE, serverId, REPLY, MPI_COMM_WORLD, &status);
-            for (iter = 0; iter < CHUNKSIZE && i < n; iter++, i++)
+            for (j = 0; j < CHUNKSIZE && i < n; j++, i++)
             {
                 in++;
                 out += singleNeutronTransport(C, Cc, H);
@@ -145,5 +139,8 @@ int main(int argc, char** argv)
         }
     }
     MPI_Finalize();
+
+    free(rands);
+
     return 0;
 }
