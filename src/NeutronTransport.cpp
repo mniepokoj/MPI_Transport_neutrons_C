@@ -28,7 +28,7 @@ int initNeutronTransportParam(int argc, char** argv, NeutronTransportParam* para
 
 double calculateDistance(double C, double u)
 {
-    return -1. / C * log(u);
+    return -1.0 / C * log(u);
 }
 
 Result singleNeutronTransport(const NeutronTransportParam* params, Sprng *stream)
