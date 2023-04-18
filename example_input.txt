@@ -1,0 +1,8 @@
+mpirun -n N ./program ITERATIONS Cc Cs H
+
+where:
+N - number of threads,
+ITERATIONS - number of iterations,
+Cc - probability of neutron capture,
+Cs - probability of neutron reflection,
+H - width of the homogeneous plate.
